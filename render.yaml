@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: nestlink-bulk-stk
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NESTLINK_API_BASE
+        value: https://automate.nestlink.co.ke/api
+      - key: NESTLINK_CLIENT_ID
+        sync: false
+      - key: NESTLINK_CLIENT_SECRET
+        sync: false
