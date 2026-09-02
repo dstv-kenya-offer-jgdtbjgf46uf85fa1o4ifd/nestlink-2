@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NestLink Bulk STK Push</title>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #f4f6f8; margin: 0; padding: 20px; display: flex; justify-content: center; }
+    .container { width: 100%; max-width: 800px; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 24px; }
+    h2 { margin-top: 0; color: #1a202c; }
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-weight: 600; margin-bottom: 6px; color: #4a5568; }
+    input, textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; }
+    textarea { height: 140px; resize: vertical; }
+    button { background: #3182ce; color: white; border: none; padding: 12px 20px; font-weight: 600; border-radius: 6px; cursor: pointer; width: 100%; }
+    button:disabled { background: #a0aec0; cursor: not-allowed; }
+    .logs { margin-top: 24px; background: #1a202c; color: #e2e8f0; border-radius: 6px; padding: 16px; height: 260px; overflow-y: auto; font-family: monospace; font-size: 13px; }
+    .log-info { color: #63b3ed; }
+    .log-success { color: #68d391; }
+    .log-error { color: #fc8181; }
+    .log-done { color: #f6ad55; font-weight: bold; }
+  </style>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h2>NestLink Bulk STK Push Dispatcher</h2>
+    <div class="form-group">
+      <label for="accountNumber">Account Number / Till</label>
+      <input type="text" id="accountNumber" value="25045" placeholder="e.g. 25045">
+    </div>
+    <div class="form-group">
+      <label for="amount">Amount (KES)</label>
+      <input type="number" id="amount" value="1000" min="1" max="150000">
+    </div>
+    <div class="form-group">
+      <label for="phones">Phone Numbers (One per line)</label>
+      <textarea id="phones" placeholder="254712345678&#10;254787654321"></textarea>
+    </div>
+    <button id="startBtn" onclick="submitBulk()">Dispatch STK Pushes</button>
+
+    <div class="logs" id="logBox">
+      <div class="log-info">[System Ready] Enter phone numbers and click dispatch.</div>
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+    const logBox = document.getElementById('logBox');
+    const startBtn = document.getElementById('startBtn');
+
+    function appendLog(msg, type) {
+      const line = document.createElement('div');
+      line.className = `log-${type}`;
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      logBox.appendChild(line);
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    socket.on('log', (data) => {
+      appendLog(data.message, data.type);
+      if (data.type === 'done' || data.type === 'error') {
+        startBtn.disabled = false;
+      }
+    });
+
+    function submitBulk() {
+      const accountNumber = document.getElementById('accountNumber').value.trim();
+      const amount = document.getElementById('amount').value;
+      const rawPhones = document.getElementById('phones').value;
+      const phones = rawPhones.split('\n').map(p => p.trim()).filter(Boolean);
+
+      if (!accountNumber || !amount || phones.length === 0) {
+        alert('Please complete all fields and enter at least one phone number.');
+        return;
+      }
+
+      startBtn.disabled = true;
+      logBox.innerHTML = '';
+      appendLog('Initializing batch...', 'info');
+
+      socket.emit('start-bulk', { accountNumber, amount, phones });
+    }
+  </script>
+</body>
+</html>
